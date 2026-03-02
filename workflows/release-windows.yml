@@ -1,0 +1,46 @@
+# Cria uma Release no GitHub e anexa o PrestacaoContasUnimed.exe
+# Dispara ao publicar uma tag (ex.: v1.0.0): git tag v1.0.0 && git push origin v1.0.0
+
+name: Release Windows EXE
+
+on:
+  push:
+    tags:
+      - "v*"   # ex.: v1.0.0, v1.2.3
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build EXE
+        run: pyinstaller --clean --noconfirm prestacao_contas_unimed.spec
+
+      - name: Verificar se o EXE foi gerado
+        run: |
+          if (!(Test-Path dist/PrestacaoContasUnimed.exe)) {
+            Get-ChildItem -Recurse dist -ErrorAction SilentlyContinue
+            Write-Error "PrestacaoContasUnimed.exe nao foi gerado em dist/"
+          }
+
+      - name: Create Release and upload EXE
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/PrestacaoContasUnimed.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
